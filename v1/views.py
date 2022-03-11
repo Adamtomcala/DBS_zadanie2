@@ -1,22 +1,11 @@
-from django.shortcuts import render
-import psycopg2
-import os
 from rest_framework.decorators import api_view
-from django.http import HttpResponse
+from django.db import connection
 from django.http import JsonResponse
 
 
 # Create your views here.
-@api_view (['GET'])
+@api_view(['GET'])
 def index(request):
-
-    connection = psycopg2.connect(
-        host=os.getenv('DBHOST'),
-        database=os.getenv('DBNAME'),
-        user=os.getenv('DBUSER'),
-        password=os.getenv('DBPASS'),
-        port=os.getenv('DBPORT')
-    )
 
     cursor = connection.cursor()
 

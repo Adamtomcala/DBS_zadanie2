@@ -11,8 +11,8 @@ from django.http import JsonResponse
 def index(request):
 
     connection = psycopg2.connect(
-        host=os.getenv('DBNAME'),
-        database=os.getenv('DBHOST'),
+        host=os.getenv('DBHOST'),
+        database=os.getenv('DBNAME'),
         user=os.getenv('DBUSER'),
         password=os.getenv('DBPASS'),
         port=os.getenv('DBPORT')

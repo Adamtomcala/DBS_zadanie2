@@ -272,7 +272,10 @@ def endpoint4(request, player_id):
     size = len(result)
     it = 0
 
-    while it < size:
+    it = 0
+    flag = True
+
+    while flag:
         matches.append({
             names_of_columns[2]: result[it][2],
             names_of_columns[3]: result[it][3],
@@ -280,12 +283,26 @@ def endpoint4(request, player_id):
         abilities = []
         for i in range(it, size):
             if i == size - 1:
-                abilities.append({
-                    names_of_columns[4]: result[i][4],
-                    names_of_columns[5]: result[i][5],
-                    names_of_columns[6]: result[it][6],
-                })
-                it = i + 1
+                flag = False
+                if result[it][2] == result[i][2]:
+                    abilities.append({
+                        names_of_columns[4]: result[i][4],
+                        names_of_columns[5]: result[i][5],
+                        names_of_columns[6]: result[i][6],
+                    })
+                else:
+                    matches[len(matches) - 1]['actions'] = abilities
+                    abilities.append({
+                        names_of_columns[4]: result[i][4],
+                        names_of_columns[5]: result[i][5],
+                        names_of_columns[6]: result[i][6],
+                    })
+                    abilities = []
+                    abilities.append({
+                        names_of_columns[4]: result[i][4],
+                        names_of_columns[5]: result[i][5],
+                        names_of_columns[6]: result[i][6],
+                    })
                 break
             if result[it][2] == result[i][2]:
                 abilities.append({
@@ -294,11 +311,6 @@ def endpoint4(request, player_id):
                     names_of_columns[6]: result[i][6],
                 })
             else:
-                abilities.append({
-                    names_of_columns[4]: result[i][4],
-                    names_of_columns[5]: result[i][5],
-                    names_of_columns[6]: result[i][6],
-                })
                 it = i
                 break
         matches[len(matches) - 1]['abilities'] = abilities

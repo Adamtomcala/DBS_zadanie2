@@ -294,4 +294,4 @@ def endpoint4(request, player_id):
 
     item['matches'] = matches
 
-    return JsonResponse(item, json_dumps_params={'indent': 3},s tatus=200)
+    return JsonResponse(item, json_dumps_params={'indent': 3},status=200)

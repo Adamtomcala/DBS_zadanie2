@@ -103,8 +103,8 @@ def endpoint2(request, player_id):
                                 ON mpd.match_id = mt.id
                             JOIN heroes as h
                                 ON mpd.hero_id = h.id
-                            WHERE mpd.player_id = 14944
-                            ORDER BY match_id""" + str(player_id))
+                            WHERE mpd.player_id =""" + str(player_id) +
+                            """ORDER BY match_id""")
 
     result = cursor.fetchall()
     names_of_columns = [desc[0] for desc in cursor.description]

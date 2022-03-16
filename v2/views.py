@@ -21,7 +21,7 @@ def endpoint1(request):
     cursor = connection.cursor()
 
     cursor.execute(f""" SELECT res.patch_version, res.patch_start_date, res.patch_end_date, mt.id as match_id, 
-                            ROUND(mt.duration/60.00,2) as match_duration
+                            ROUND(mt.duration/60.00,2) as duration
                             FROM matches as mt
                             right JOIN 
                             (	SELECT 	"name" as patch_version, cast(extract(EPOCH from release_date) as integer)
@@ -61,6 +61,10 @@ def endpoint1(request):
                     else:
                         it = i + 1
                     break
+
+                print(type(result[i][4]))
+                result[i][4] = round(result[i][4])
+                print(result[i][4])
                 matches.append({
                     names_of_columns[3]: result[i][3],
                     names_of_columns[4]: float(result[i][4]),

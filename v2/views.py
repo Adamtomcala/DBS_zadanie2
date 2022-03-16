@@ -204,8 +204,8 @@ def endpoint3(request, player_id):
                 else:
                     matches[len(matches) - 1]['actions'] = actions
                     matches.append({
-                        names_of_columns[2]: result[it][2],
-                        names_of_columns[3]: result[it][3],
+                        names_of_columns[2]: result[i][2],
+                        names_of_columns[3]: result[i][3],
                     })
                     actions = []
                     actions.append({

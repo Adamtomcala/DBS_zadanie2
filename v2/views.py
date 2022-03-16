@@ -87,23 +87,24 @@ def endpoint2(request, player_id):
     cursor = connection.cursor()
 
     cursor.execute(f"""SELECT pl.id as "id", COALESCE(pl.nick, 'unknown') as player_nick,
-					mt.id as match_id,
-					h.localized_name as hero_localized_name,
-	                round(mt.duration/60.0, 2) as match_duration_minutes,
-	                (coalesce(mpd.xp_hero, 0) + coalesce(mpd.xp_creep, 0) + coalesce(mpd.xp_roshan, 0) + coalesce(mpd.xp_other,0)) as experiences_gained,
-	                mpd.level as level_gained,
-                    CASE
-                            WHEN player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
-                            ELSE mt.radiant_win
-                    END as winner
-                    FROM matches_players_details as mpd
-                    JOIN players as pl
-                        ON mpd.player_id = pl.id
-                    JOIN matches as mt
-                        ON mpd.match_id = mt.id
-                    JOIN heroes as h
-                        ON mpd.hero_id = h.id
-                    WHERE mpd.player_id = """ + str(player_id))
+                            mt.id as match_id,
+                            h.localized_name as hero_localized_name,
+                            round(mt.duration/60.0, 2) as match_duration_minutes,
+                            (coalesce(mpd.xp_hero, 0) + coalesce(mpd.xp_creep, 0) + coalesce(mpd.xp_roshan, 0) + coalesce(mpd.xp_other,0)) as experiences_gained,
+                            mpd.level as level_gained,
+                            CASE
+                                    WHEN player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
+                                    ELSE mt.radiant_win
+                            END as winner
+                            FROM matches_players_details as mpd
+                            JOIN players as pl
+                                ON mpd.player_id = pl.id
+                            JOIN matches as mt
+                                ON mpd.match_id = mt.id
+                            JOIN heroes as h
+                                ON mpd.hero_id = h.id
+                            WHERE mpd.player_id = 14944
+                            ORDER BY match_id""" + str(player_id))
 
     result = cursor.fetchall()
     names_of_columns = [desc[0] for desc in cursor.description]
@@ -121,7 +122,7 @@ def endpoint2(request, player_id):
             names_of_columns[2]: row[2],
             names_of_columns[3]: row[3],
             names_of_columns[4]: row[4],
-            names_of_columns[5]: row[5],
+            names_of_columns[5]: int(row[5]),
             names_of_columns[6]: row[6],
             names_of_columns[7]: row[7],
         })

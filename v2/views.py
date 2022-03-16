@@ -63,7 +63,7 @@ def endpoint1(request):
                     break
                 matches.append({
                     names_of_columns[3]: result[i][3],
-                    names_of_columns[4]: result[i][4],
+                    names_of_columns[4]: float(result[i][4]),
                 })
             else:
                 it = i

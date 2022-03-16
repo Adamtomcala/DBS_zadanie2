@@ -61,10 +61,6 @@ def endpoint1(request):
                     else:
                         it = i + 1
                     break
-
-                print(type(result[i][4]))
-                result[i][4] = round(result[i][4])
-                print(result[i][4])
                 matches.append({
                     names_of_columns[3]: result[i][3],
                     names_of_columns[4]: float(result[i][4]),

@@ -121,8 +121,8 @@ def endpoint2(request, player_id):
         matches.append({
             names_of_columns[2]: row[2],
             names_of_columns[3]: row[3],
-            names_of_columns[4]: row[4],
-            names_of_columns[5]: int(row[5]),
+            names_of_columns[4]: float(row[4]),
+            names_of_columns[5]: row[5],
             names_of_columns[6]: row[6],
             names_of_columns[7]: row[7],
         })

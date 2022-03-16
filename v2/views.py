@@ -156,7 +156,7 @@ def endpoint3(request, player_id):
                        join (
                             select res.player_id, res.match_id, COALESCE(gos.subtype, 'NO_ACTION') as hero_action, 
                                 CASE
-                                    WHEN gos.subtype is NULL THEN 0
+                                    WHEN gos.subtype is NULL THEN 1
                                     ELSE count(*)
                                 END as count
                             from game_objectives as gos
@@ -184,9 +184,10 @@ def endpoint3(request, player_id):
     }
     matches = []
     size = len(result)
-    it = 0
 
-    while it < size:
+    it = 0
+    flag = True
+    while flag:
         matches.append({
             names_of_columns[2]: result[it][2],
             names_of_columns[3]: result[it][3],
@@ -194,24 +195,16 @@ def endpoint3(request, player_id):
         actions = []
         for i in range(it, size):
             if i == size - 1:
-                actions.append({
-                    names_of_columns[4]: result[i][4],
-                    names_of_columns[5]: result[i][5]
-                })
-                it = i + 1
-                break
+                flag = False
             if result[it][2] == result[i][2]:
                 actions.append({
                     names_of_columns[4]: result[i][4],
                     names_of_columns[5]: result[i][5]
                 })
             else:
-                actions.append({
-                    names_of_columns[4]: result[i][4],
-                    names_of_columns[5]: result[i][5]
-                })
                 it = i
                 break
+
         matches[len(matches) - 1]['actions'] = actions
 
     item['matches'] = matches

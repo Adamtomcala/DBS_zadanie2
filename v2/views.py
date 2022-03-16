@@ -196,6 +196,23 @@ def endpoint3(request, player_id):
         for i in range(it, size):
             if i == size - 1:
                 flag = False
+                if result[it][2] == result[i][2]:
+                    actions.append({
+                        names_of_columns[4]: result[i][4],
+                        names_of_columns[5]: result[i][5]
+                    })
+                else:
+                    matches[len(matches) - 1]['actions'] = actions
+                    matches.append({
+                        names_of_columns[2]: result[it][2],
+                        names_of_columns[3]: result[it][3],
+                    })
+                    actions = []
+                    actions.append({
+                        names_of_columns[4]: result[i][4],
+                        names_of_columns[5]: result[i][5]
+                    })
+                break
             if result[it][2] == result[i][2]:
                 actions.append({
                     names_of_columns[4]: result[i][4],

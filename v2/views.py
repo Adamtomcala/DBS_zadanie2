@@ -71,7 +71,7 @@ def endpoint1(request):
         item['matches'] = matches
         records.append(item)
 
-    return JsonResponse({'patches': records}, json_dumps_params={'indent': 3})
+    return JsonResponse({'patches': records}, json_dumps_params={'indent': 3}, status=200)
 
 
 @api_view(['GET'])
@@ -127,7 +127,7 @@ def endpoint2(request, player_id):
         })
 
     item['matches'] = matches
-    return JsonResponse(item, json_dumps_params={'indent': 3})
+    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 
 @api_view(['GET'])
@@ -215,7 +215,7 @@ def endpoint3(request, player_id):
 
     item['matches'] = matches
 
-    return JsonResponse(item, json_dumps_params={'indent': 3})
+    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 
 @api_view(['GET'])
@@ -294,4 +294,4 @@ def endpoint4(request, player_id):
 
     item['matches'] = matches
 
-    return JsonResponse(item, json_dumps_params={'indent': 3})
+    return JsonResponse(item, json_dumps_params={'indent': 3},s tatus=200)

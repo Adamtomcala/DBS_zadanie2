@@ -4,12 +4,9 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 
 
-# Create your views here.
-
-
-@api_view(['GET'])
-def endpoint1(request):
-
+# Funkcia na nadviazanie spojenia + vratenia vysledku z QUERY
+# Funkcia navyse vracia nazvy stlpcov, ktore pouzivam pri formatovani
+def get_result_and_columns(query):
     connection = psycopg2.connect(
         host=os.getenv('DBHOST'),
         database=os.getenv('DBNAME'),
@@ -20,32 +17,37 @@ def endpoint1(request):
 
     cursor = connection.cursor()
 
-    cursor.execute(f""" SELECT res.patch_version, res.patch_start_date, res.patch_end_date, mt.id as match_id, 
-                            ROUND(mt.duration/60.00,2) as "duration"
-                            FROM matches as mt
-                            right JOIN 
-                            (	SELECT 	"name" as patch_version, cast(extract(EPOCH from release_date) as integer)
-                                        as patch_start_date,
-                                        LEAD(cast(extract(EPOCH from release_date) as integer), 1) OVER(ORDER BY release_date) 
-                                        as patch_end_date
-                            from patches
-                            order by "id") as res
-                            ON mt.start_time between res.patch_start_date and res.patch_end_date 
-                            ORDER BY res.patch_version, match_id
-                            """)
+    cursor.execute(query)
 
-    result = cursor.fetchall()
-    # dorobit
-    if not result:
-        pass
+    return cursor.fetchall(), [desc[0] for desc in cursor.description]
+
+
+@api_view(['GET'])
+def endpoint1(request):
+
+    query = f"""SELECT res.patch_version, res.patch_start_date, res.patch_end_date, mt.id AS match_id, 
+                            ROUND(mt.duration/60.00,2) AS "duration"
+                            FROM matches AS mt
+                            RIGHT JOIN 
+                            (	SELECT 	"name" AS patch_version, cast(extract(EPOCH FROM release_date) AS INTEGER)
+                                        AS patch_start_date,
+                                        LEAD(cast(extract(EPOCH FROM release_date) AS INTEGER), 1) OVER(ORDER BY release_date) 
+                                        AS patch_end_date
+                            FROM patches
+                            ORDER BY "id") AS res
+                                ON mt.start_time BETWEEN res.patch_start_date AND res.patch_end_date 
+                            ORDER BY res.patch_version, match_id"""
+
+    result, names_of_columns = get_result_and_columns(query)
 
     records = []
-
-    names_of_columns = [desc[0] for desc in cursor.description]
     size = len(result)
 
+    # Pomocne premenne pri formatovani
     flag = True
     it = 0
+
+    # Uprava formatu
     while flag:
         item = {
             names_of_columns[0]: result[it][0],
@@ -76,17 +78,8 @@ def endpoint1(request):
 
 @api_view(['GET'])
 def endpoint2(request, player_id):
-    connection = psycopg2.connect(
-        host=os.getenv('DBHOST'),
-        database=os.getenv('DBNAME'),
-        user=os.getenv('DBUSER'),
-        password=os.getenv('DBPASS'),
-        port=os.getenv('DBPORT')
-    )
 
-    cursor = connection.cursor()
-
-    cursor.execute(f"""SELECT pl.id as "id", COALESCE(pl.nick, 'unknown') as player_nick,
+    query = f"""SELECT pl.id as "id", COALESCE(pl.nick, 'unknown') as player_nick,
                             mt.id as match_id,
                             h.localized_name as hero_localized_name,
                             round(mt.duration/60.0, 2) as match_duration_minutes,
@@ -103,11 +96,9 @@ def endpoint2(request, player_id):
                                 ON mpd.match_id = mt.id
                             JOIN heroes as h
                                 ON mpd.hero_id = h.id
-                            WHERE mpd.player_id =""" + str(player_id) +
-                            """ORDER BY match_id""")
+                            WHERE mpd.player_id =""" + str(player_id) + f"""ORDER BY match_id"""
 
-    result = cursor.fetchall()
-    names_of_columns = [desc[0] for desc in cursor.description]
+    result, names_of_columns = get_result_and_columns(query)
 
     if not result:
         pass
@@ -133,17 +124,8 @@ def endpoint2(request, player_id):
 
 @api_view(['GET'])
 def endpoint3(request, player_id):
-    connection = psycopg2.connect(
-        host=os.getenv('DBHOST'),
-        database=os.getenv('DBNAME'),
-        user=os.getenv('DBUSER'),
-        password=os.getenv('DBPASS'),
-        port=os.getenv('DBPORT')
-    )
 
-    cursor = connection.cursor()
-
-    cursor.execute(f"""select pl.id, pl.nick as player_nick, final_result.match_id,
+    query = f"""select pl.id, pl.nick as player_nick, final_result.match_id,
                        h.localized_name as hero_localized_name,
                        final_result.hero_action, final_result.count
                        from matches_players_details as mpd
@@ -169,11 +151,9 @@ def endpoint3(request, player_id):
                             group by res.player_id, res.match_id, gos.subtype
                         ) as final_result
                             on final_result.player_id = pl.id and final_result.match_id = mt.id
-                        order by mpd.match_id ASC""" % player_id)
+                        order by mpd.match_id ASC""" % player_id
 
-    result = cursor.fetchall()
-
-    names_of_columns = [desc[0] for desc in cursor.description]
+    result, names_of_columns = get_result_and_columns(query)
 
     if not result:
         pass
@@ -231,17 +211,8 @@ def endpoint3(request, player_id):
 
 @api_view(['GET'])
 def endpoint4(request, player_id):
-    connection = psycopg2.connect(
-        host=os.getenv('DBHOST'),
-        database=os.getenv('DBNAME'),
-        user=os.getenv('DBUSER'),
-        password=os.getenv('DBPASS'),
-        port=os.getenv('DBPORT'),
-    )
 
-    cursor = connection.cursor()
-
-    cursor.execute(f""" SELECT distinct mp.player_id as "id", pl.nick as player_nick,
+    query = (f"""SELECT distinct mp.player_id as "id", pl.nick as player_nick,
                             mp.match_id, h.localized_name as hero_localized_name, 
                             ab.name as ability_name, count(mp.player_id) over(partition by mp.player_id, mp.match_id, au.ability_id),
                             max(au.level) over(partition by mp.player_id, mp.match_id, au.ability_id) as upgrade_level
@@ -254,11 +225,9 @@ def endpoint4(request, player_id):
                                 on mp.player_id = pl.id
                             join heroes as h
                                 on mp.hero_id = h.id
-                            where mp.player_id = """ + str(player_id))
+                            where mp.player_id = %s""" % player_id)
 
-    result = cursor.fetchall()
-
-    names_of_columns = [desc[0] for desc in cursor.description]
+    result, names_of_columns = get_result_and_columns(query)
 
     if not result:
         pass

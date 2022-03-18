@@ -79,22 +79,22 @@ def endpoint1(request):
 @api_view(['GET'])
 def endpoint2(request, player_id):
 
-    query = f"""SELECT pl.id as "id", COALESCE(pl.nick, 'unknown') as player_nick,
-                            mt.id as match_id,
-                            h.localized_name as hero_localized_name,
-                            round(mt.duration/60.0, 2) as match_duration_minutes,
-                            (coalesce(mpd.xp_hero, 0) + coalesce(mpd.xp_creep, 0) + coalesce(mpd.xp_roshan, 0) + coalesce(mpd.xp_other,0)) as experiences_gained,
-                            mpd.level as level_gained,
+    query = f"""SELECT pl.id AS "id", COALESCE(pl.nick, 'unknown') AS player_nick,
+                            mt.id AS match_id,
+                            h.localized_name AS hero_localized_name,
+                            round(mt.duration/60.0, 2) AS match_duration_minutes,
+                            (coalesce(mpd.xp_hero, 0) + coalesce(mpd.xp_creep, 0) + coalesce(mpd.xp_roshan, 0) + coalesce(mpd.xp_other,0)) AS experiences_gained,
+                            mpd.level AS level_gained,
                             CASE
                                     WHEN player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
                                     ELSE mt.radiant_win
-                            END as winner
-                            FROM matches_players_details as mpd
-                            JOIN players as pl
+                            END AS winner
+                            FROM matches_players_details AS mpd
+                            JOIN players AS pl
                                 ON mpd.player_id = pl.id
-                            JOIN matches as mt
+                            JOIN matches AS mt
                                 ON mpd.match_id = mt.id
-                            JOIN heroes as h
+                            JOIN heroes AS h
                                 ON mpd.hero_id = h.id
                             WHERE mpd.player_id =""" + str(player_id) + f"""ORDER BY match_id"""
 
@@ -125,33 +125,33 @@ def endpoint2(request, player_id):
 @api_view(['GET'])
 def endpoint3(request, player_id):
 
-    query = f"""select pl.id, pl.nick as player_nick, final_result.match_id,
-                       h.localized_name as hero_localized_name,
+    query = f"""SELECT pl.id, pl.nick AS player_nick, final_result.match_id,
+                       h.localized_name AS hero_localized_name,
                        final_result.hero_action, final_result.count
-                       from matches_players_details as mpd
-                       join players as pl
-                            on pl.id = mpd.player_id
-                       join matches as mt
-                            on mt.id = mpd.match_id
-                       join heroes as h
-                            on mpd.hero_id = h.id
-                       join (
-                            select res.player_id, res.match_id, COALESCE(gos.subtype, 'NO_ACTION') as hero_action, 
+                       FROM matches_players_details AS mpd
+                       JOIN players AS pl
+                            ON pl.id = mpd.player_id
+                       JOIN matches AS mt
+                            ON mt.id = mpd.match_id
+                       JOIN heroes AS h
+                            ON mpd.hero_id = h.id
+                       JOIN (
+                            SELECT res.player_id, res.match_id, COALESCE(gos.subtype, 'NO_ACTION') AS hero_action, 
                                 CASE
-                                    WHEN gos.subtype is NULL THEN 1
+                                    WHEN gos.subtype IS NULL THEN 1
                                     ELSE count(*)
-                                END as count
-                            from game_objectives as gos
-                            right join	(select mpd.id, mpd.match_id, mpd.player_id
-                                     from matches_players_details as mpd
-                                     where mpd.player_id = %s 
-                                     group by mpd.id, mpd.match_id, mpd.player_id
-                                     ) as res
-                            on gos.match_player_detail_id_1 = res.id
-                            group by res.player_id, res.match_id, gos.subtype
-                        ) as final_result
-                            on final_result.player_id = pl.id and final_result.match_id = mt.id
-                        order by mpd.match_id ASC""" % player_id
+                                END AS count
+                            FROM game_objectives AS gos
+                            RIGHT JOIN	(SELECT mpd.id, mpd.match_id, mpd.player_id
+                                     FROM matches_players_details AS mpd
+                                     WHERE mpd.player_id = %s 
+                                     GROUP BY mpd.id, mpd.match_id, mpd.player_id
+                                     ) AS res
+                            ON gos.match_player_detail_id_1 = res.id
+                            GROUP BY res.player_id, res.match_id, gos.subtype
+                        ) AS final_result
+                            ON final_result.player_id = pl.id AND final_result.match_id = mt.id
+                        ORDER BY  mpd.match_id ASC""" % player_id
 
     result, names_of_columns = get_result_and_columns(query)
 
@@ -212,20 +212,20 @@ def endpoint3(request, player_id):
 @api_view(['GET'])
 def endpoint4(request, player_id):
 
-    query = (f"""SELECT distinct mp.player_id as "id", pl.nick as player_nick,
-                            mp.match_id, h.localized_name as hero_localized_name, 
-                            ab.name as ability_name, count(mp.player_id) over(partition by mp.player_id, mp.match_id, au.ability_id),
-                            max(au.level) over(partition by mp.player_id, mp.match_id, au.ability_id) as upgrade_level
-                            from matches_players_details as mp 
-                            join ability_upgrades as au
-                                on mp.id = au.match_player_detail_id
-                            join abilities as ab
-                                on ab.id = au.ability_id
-                            join players as pl
-                                on mp.player_id = pl.id
-                            join heroes as h
-                                on mp.hero_id = h.id
-                            where mp.player_id = %s""" % player_id)
+    query = (f"""SELECT distinct mp.player_id AS "id", pl.nick AS player_nick,
+                            mp.match_id, h.localized_name AS hero_localized_name, 
+                            ab.name AS ability_name, count(mp.player_id) over(PARTITION BY mp.player_id, mp.match_id, au.ability_id),
+                            max(au.level) over(PARTITION BY mp.player_id, mp.match_id, au.ability_id) AS upgrade_level
+                            FROM matches_players_details AS mp 
+                            JOIN ability_upgrades AS au
+                                ON mp.id = au.match_player_detail_id
+                            JOIN abilities AS ab
+                                ON ab.id = au.ability_id
+                            JOIN players AS pl
+                                ON mp.player_id = pl.id
+                            JOIN heroes AS h
+                                ON mp.hero_id = h.id
+                            WHERE mp.player_id = %s""" % player_id)
 
     result, names_of_columns = get_result_and_columns(query)
 

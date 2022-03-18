@@ -29,9 +29,9 @@ def endpoint1(request):
                             ROUND(mt.duration/60.00,2) AS "duration"
                             FROM matches AS mt
                             RIGHT JOIN 
-                            (	SELECT 	"name" AS patch_version, cast(extract(EPOCH FROM release_date) AS INTEGER)
+                            (	SELECT 	"name" AS patch_version, CAST(EXTRACT (EPOCH FROM release_date) AS INTEGER)
                                         AS patch_start_date,
-                                        LEAD(cast(extract(EPOCH FROM release_date) AS INTEGER), 1) OVER(ORDER BY release_date) 
+                                        LEAD(CAST(EXTRACT (EPOCH FROM release_date) AS INTEGER), 1) OVER(ORDER BY release_date) 
                                         AS patch_end_date
                             FROM patches
                             ORDER BY "id") AS res
@@ -82,8 +82,8 @@ def endpoint2(request, player_id):
     query = f"""SELECT pl.id AS "id", COALESCE(pl.nick, 'unknown') AS player_nick,
                             mt.id AS match_id,
                             h.localized_name AS hero_localized_name,
-                            round(mt.duration/60.0, 2) AS match_duration_minutes,
-                            (coalesce(mpd.xp_hero, 0) + coalesce(mpd.xp_creep, 0) + coalesce(mpd.xp_roshan, 0) + coalesce(mpd.xp_other,0)) AS experiences_gained,
+                            ROUND(mt.duration/60.0, 2) AS match_duration_minutes,
+                            (COALESCE(mpd.xp_hero, 0) + COALESCE(mpd.xp_creep, 0) + COALESCE(mpd.xp_roshan, 0) + COALESCE(mpd.xp_other,0)) AS experiences_gained,
                             mpd.level AS level_gained,
                             CASE
                                     WHEN player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
@@ -139,7 +139,7 @@ def endpoint3(request, player_id):
                             SELECT res.player_id, res.match_id, COALESCE(gos.subtype, 'NO_ACTION') AS hero_action, 
                                 CASE
                                     WHEN gos.subtype IS NULL THEN 1
-                                    ELSE count(*)
+                                    ELSE COUNT(*)
                                 END AS count
                             FROM game_objectives AS gos
                             RIGHT JOIN	(SELECT mpd.id, mpd.match_id, mpd.player_id
@@ -212,10 +212,10 @@ def endpoint3(request, player_id):
 @api_view(['GET'])
 def endpoint4(request, player_id):
 
-    query = (f"""SELECT distinct mp.player_id AS "id", pl.nick AS player_nick,
+    query = (f"""SELECT DISTINCT mp.player_id AS "id", pl.nick AS player_nick,
                             mp.match_id, h.localized_name AS hero_localized_name, 
-                            ab.name AS ability_name, count(mp.player_id) over(PARTITION BY mp.player_id, mp.match_id, au.ability_id),
-                            max(au.level) over(PARTITION BY mp.player_id, mp.match_id, au.ability_id) AS upgrade_level
+                            ab.name AS ability_name, COUNT(mp.player_id) OVER(PARTITION BY mp.player_id, mp.match_id, au.ability_id),
+                            MAX(au.level) OVER(PARTITION BY mp.player_id, mp.match_id, au.ability_id) AS upgrade_level
                             FROM matches_players_details AS mp 
                             JOIN ability_upgrades AS au
                                 ON mp.id = au.match_player_detail_id

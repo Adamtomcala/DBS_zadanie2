@@ -92,20 +92,20 @@ def endpoint1(request, match_id):
                     heroes[len(heroes) - 1]['top_purchases'] = items
                     items = []
                     items.append({
-                        name_of_columns[3]: result[i][3],
-                        name_of_columns[4]: result[i][4],
                         name_of_columns[5]: result[i][5],
+                        'id': result[i][3],
+                        'name': result[i][4],
                     })
             elif result[it][1] == result[i][1]:
                 items.append({
-                    name_of_columns[3]: result[i][3],
-                    'id': result[i][4],
-                    'name': result[i][5],
+                    name_of_columns[5]: result[i][5],
+                    'id': result[i][3],
+                    'name': result[i][4],
                 })
             else:
                 it = i
                 break
-        heroes[len(heroes) - 1]['top_purchase'] = items
+        heroes[len(heroes) - 1]['top_purchases'] = items
 
     item['heroes'] = heroes
 

@@ -65,7 +65,7 @@ def endpoint1(request, match_id):
         pass
 
     item = {
-        name_of_columns[0]: result[0][0]
+        'id': result[0][0]
     }
     size = len(result)
     heroes = []
@@ -85,8 +85,8 @@ def endpoint1(request, match_id):
                 if result[it][1] == result[i][1]:
                     items.append({
                         name_of_columns[3]: result[i][3],
-                        name_of_columns[4]: result[i][4],
-                        name_of_columns[5]: result[i][5],
+                        'id': result[i][4],
+                        'name': result[i][5],
                     })
                 else:
                     heroes[len(heroes) - 1]['top_purchases'] = items

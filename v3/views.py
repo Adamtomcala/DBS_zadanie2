@@ -24,40 +24,40 @@ def get_result_and_columns(query):
 
 def endpoint1(request, match_id):
 
-    query = (f"""with res as (
-                    select mpd.id, mpd.hero_id, mpd.match_id, h.localized_name
-                    from matches_players_details as mpd
-                    join heroes as h
-                        on
+    query = (f"""WITH res AS (
+                    SELECT mpd.id, mpd.hero_id, mpd.match_id, h.localized_name
+                    FROM matches_players_details AS mpd
+                    JOIN heroes AS h
+                        ON
                     h.id = mpd.hero_id
-                    where mpd.hero_id IN (
-                                        select h.id from matches_players_details as mpd
-                                        join matches as mt
-                                            on mpd.match_id = mt.id
-                                        JOIN heroes as h
-                                            on h.id = mpd.hero_id
-                                        where mpd.match_id = %s AND 
+                    WHERE mpd.hero_id IN (
+                                        SELECT h.id FROM matches_players_details AS mpd
+                                        JOIN matches AS mt
+                                            ON mpd.match_id = mt.id
+                                        JOIN heroes AS h
+                                            ON h.id = mpd.hero_id
+                                        WHERE mpd.match_id = %s AND 
                                             ((mpd.player_slot IN (0,1,2,3,4) AND mt.radiant_win) 
                                              OR (mpd.player_slot IN (128,129,130,131,132) AND NOT mt.radiant_win))
                                         ) AND mpd.match_id = %s
                             )																	
-                select res3.match_id, res3.hero_id, res3.localized_name,
-                       res3.item_id, res3.item_name, res3. cnt as "count"
-                from(
-                     select *, rank() over(partition by res2.hero_id order by res2.cnt DESC, res2.item_name)
-                     from (	
-                            select distinct res.match_id, res.hero_id, res.localized_name,
-                            pl.item_id , items.name as item_name,  count(*) over(partition by pl.match_player_detail_id, pl.item_id) as cnt
-                            from purchase_logs as pl
-                            join res
-                                on pl.match_player_detail_id = res.id
-                            join items
-                                on pl.item_id = items.id
-                            order by res.hero_id, cnt DESC
+                SELECT res3.match_id, res3.hero_id AS "id", res3.localized_name AS "name" ,
+                       res3.item_id, res3.item_name, res3. cnt AS "count"
+                FROM(
+                     SELECT *, rank() over(PARTITION BY res2.hero_id ORDER BY res2.cnt DESC, res2.item_name)
+                     FROM (	
+                            SELECT DISTINCT res.match_id, res.hero_id, res.localized_name,
+                            pl.item_id , items.name AS item_name,  COUNT(*) over(PARTITION BY pl.match_player_detail_id, pl.item_id) AS cnt
+                            FROM purchase_logs AS pl
+                            JOIN res
+                                ON pl.match_player_detail_id = res.id
+                            JOIN items
+                                ON pl.item_id = items.id
+                            ORDER BY res.hero_id, cnt DESC
                           ) res2
-                     order by res2.hero_id, res2.cnt DESC
+                     ORDER BY res2.hero_id, res2.cnt DESC
                     ) res3
-                where res3.rank <= 5""" % (str(match_id), str(match_id)))
+                WHERE res3.rank <= 5""" % (str(match_id), str(match_id)))
 
     result, name_of_columns = get_result_and_columns(query)
 
@@ -89,7 +89,7 @@ def endpoint1(request, match_id):
                         name_of_columns[5]: result[i][5],
                     })
                 else:
-                    heroes[len(heroes) - 1]['top_purchase'] = items
+                    heroes[len(heroes) - 1]['top_purchases'] = items
                     items = []
                     items.append({
                         name_of_columns[3]: result[i][3],
@@ -99,11 +99,12 @@ def endpoint1(request, match_id):
             elif result[it][1] == result[i][1]:
                 items.append({
                     name_of_columns[3]: result[i][3],
-                    name_of_columns[4]: result[i][4],
-                    name_of_columns[5]: result[i][5],
+                    'id': result[i][4],
+                    'name': result[i][5],
                 })
             else:
                 it = i
+                break
         heroes[len(heroes) - 1]['top_purchase'] = items
 
     item['heroes'] = heroes

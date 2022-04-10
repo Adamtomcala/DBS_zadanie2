@@ -116,9 +116,9 @@ def endpoint2(request, ability_id):
 
     query = (f"""select *
                 from (
-                        select distinct *, dense_rank() over(partition by res2.hero_id, res2.winner order by res2.cnt DESC) as "rank"
+                        select *, dense_rank() over(partition by res2.hero_id, res2.winner order by res2.cnt DESC) as "rank"
                         from (
-                                select *, count(*) over(partition by res.hero_id, res.winner, res.timee) as cnt
+                                select distinct *, count(*) over(partition by res.hero_id, res.winner, res.timee) as cnt
                                 from (
                                         select ab.id, ab.name, h.id as hero_id, h.localized_name,
                                             CASE

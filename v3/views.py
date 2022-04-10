@@ -155,7 +155,79 @@ def endpoint2(request, ability_id):
                 where "rank" = 1
                 order by res3.hero_id""" % ability_id)
 
-    pass
+    result, name_of_columns = get_result_and_columns(query)
+
+    if not result:
+        pass
+
+    item = {
+        name_of_columns[0]: result[0][0],
+        name_of_columns[1]: result[0][1],
+    }
+    size = len(result)
+    heroes = []
+
+    it = 0
+    flag = True
+
+    heroes = []
+    while flag:
+        heroes.append({
+            'id': result[it][2],
+            'name': result[it][3],
+        })
+        team1 = {}
+        team2 = {}
+        for i in range(it, size):
+            if i == size - 1:
+                if result[it][2] == result[i][2]:
+                    if result[i][4]:
+                        team1 = {
+                            'bucket': result[i][5],
+                            'count': result[i][6],
+                        }
+                    else:
+                        team2 = {
+                            'bucket': result[i][5],
+                            'count': result[i][6],
+                        }
+                else:
+                    if len(team1) != 0:
+                        heroes[len(heroes) - 1]['usage_winners'] = team1
+                    if len(team2) != 0:
+                        heroes[len(heroes) - 1]['usage_loosers'] = team2
+                    team = {
+                        'bucket': result[i][5],
+                        'count': result[i][6],
+                    }
+                    if result[i][4]:
+                        heroes[len(heroes) - 1]['usage_winners'] = team
+                    else:
+                        heroes[len(heroes) - 1]['usage_loosers'] = team
+
+            elif result[it][2] == result[i][2]:
+                if result[i][4]:
+                    team1 = {
+                        'bucket': result[i][5],
+                        'count': result[i][6],
+                    }
+                else:
+                    team2 = {
+                        'bucket': result[i][5],
+                        'count': result[i][6],
+                    }
+            else:
+                it = i
+                break
+
+        if len(team1) != 0:
+            heroes[len(heroes) - 1]['usage_winners'] = team1
+        if len(team2) != 0:
+            heroes[len(heroes) - 1]['usage_loosers'] = team2
+
+    item['heroes'] = heroes
+
+    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 
 def endpoint3(request):

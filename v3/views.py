@@ -205,7 +205,7 @@ def endpoint2(request, ability_id):
                         heroes[len(heroes) - 1]['usage_winners'] = team
                     else:
                         heroes[len(heroes) - 1]['usage_loosers'] = team
-
+                flag = False
             elif result[it][2] == result[i][2]:
                 if result[i][4]:
                     team1 = {

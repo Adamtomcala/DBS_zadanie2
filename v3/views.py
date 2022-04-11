@@ -114,51 +114,48 @@ def endpoint1(request, match_id):
 
 def endpoint2(request, ability_id):
 
-    query = (f"""select *
-                    from(
-                        select distinct *, dense_rank() over(partition by res2.hero_id, res2.winner order by res2.cnt DESC) as "rank"
-                                from (
-                                        select res.id, res.name, res.hero_id, res.localized_name, res.winner, res.timee, count(*) as cnt
-                                        from 	(
-                                                select ab.id, ab.name, h.id as hero_id, h.localized_name,
-                                                    CASE
-                                                        WHEN mpd.player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
-                                                        ELSE mt.radiant_win
-                                                    END AS winner,
-                                                    CASE
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.1 THEN '0-9'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.2 THEN '10-19'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.3 THEN '20-29'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.4 THEN '30-39'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.5 THEN '40-49'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.6 THEN '50-59'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.7 THEN '60-69'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.8 THEN '70-79'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 0.9 THEN '80-89'
-                                                        WHEN cast(au.time as decimal)/mt.duration < 1.0 THEN '90-99'
-                                                        ELSE '100-109'
-                                                    END as timee
-                                                from abilities as ab
-                                                join ability_upgrades as au
-                                                    on ab.id = au.ability_id
-                                                join matches_players_details as mpd
-                                                    on mpd.id = au.match_player_detail_id
-                                                join matches as mt
-                                                    on mpd.match_id = mt.id
-                                                join heroes as h
-                                                    on h.id = mpd.hero_id
-                                                where ab.id = %s
-                                            ) res
-                                        group by (res.id, res.name, res.hero_id,res.localized_name, res.winner, res.timee)
-                                    ) res2
-                        ) res3
-                    where "rank" = 1
-                    order by cnt desc""" % ability_id)
+    query = (f"""with res as (
+                select ab.id, ab.name, h.id as hero_id, h.localized_name,
+                                            CASE
+                                                WHEN mpd.player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
+                                                ELSE mt.radiant_win
+                                            END AS winner,
+                                            CASE
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.1 THEN '0-9'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.2 THEN '10-19'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.3 THEN '20-29'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.4 THEN '30-39'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.5 THEN '40-49'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.6 THEN '50-59'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.7 THEN '60-69'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.8 THEN '70-79'
+                                                WHEN cast(au.time as decimal)/mt.duration < 0.9 THEN '80-89'
+                                                WHEN cast(au.time as decimal)/mt.duration < 1.0 THEN '90-99'
+                                                ELSE '100-109'
+                                            END as timee
+                                        from abilities as ab
+                                        join ability_upgrades as au
+                                            on ab.id = au.ability_id
+                                        join matches_players_details as mpd
+                                            on mpd.id = au.match_player_detail_id
+                                        join matches as mt
+                                            on mpd.match_id = mt.id
+                                        join heroes as h
+                                            on h.id = mpd.hero_id
+                                        where ab.id = %s
+            )
+            select *
+            from(
+                select distinct *, dense_rank() over(partition by res2.hero_id, res2.winner order by res2.cnt DESC) as "rank"
+                        from (
+                                select res.id, res.name, res.hero_id, res.localized_name, res.winner, res.timee, count(*) as cnt
+                                from res
+                                group by (res.id, res.name, res.hero_id,res.localized_name, res.winner, res.timee)
+                            ) res2
+                ) res3
+            where "rank" = 1
+            order by cnt desc""" % ability_id)
 
-    re = {
-        'status': 'ok',
-    }
-    return JsonResponse(re, json_dumps_params={'indent': 3}, status=200)
     result, name_of_columns = get_result_and_columns(query)
 
     if not result:

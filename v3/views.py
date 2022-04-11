@@ -109,7 +109,10 @@ def endpoint1(request, match_id):
 
     item['heroes'] = heroes
 
-    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
+    re = {
+        'status': 'ok',
+    }
+    return JsonResponse(re, json_dumps_params={'indent': 3}, status=200)
 
 
 def endpoint2(request, ability_id):

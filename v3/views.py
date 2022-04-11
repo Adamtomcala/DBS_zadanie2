@@ -193,18 +193,8 @@ def endpoint2(request, ability_id):
                             'count': result[i][6],
                         }
                 else:
-                    if len(team1) != 0:
-                        heroes[len(heroes) - 1]['usage_winners'] = team1
-                    if len(team2) != 0:
-                        heroes[len(heroes) - 1]['usage_loosers'] = team2
-                    team = {
-                        'bucket': result[i][5],
-                        'count': result[i][6],
-                    }
-                    if result[i][4]:
-                        heroes[len(heroes) - 1]['usage_winners'] = team
-                    else:
-                        heroes[len(heroes) - 1]['usage_loosers'] = team
+                    it = i
+                    break
                 flag = False
             elif result[it][2] == result[i][2]:
                 if result[i][4]:

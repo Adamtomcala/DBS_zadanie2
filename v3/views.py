@@ -109,10 +109,7 @@ def endpoint1(request, match_id):
 
     item['heroes'] = heroes
 
-    re = {
-        'status': 'ok',
-    }
-    return JsonResponse(re, json_dumps_params={'indent': 3}, status=200)
+    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 
 def endpoint2(request, ability_id):
@@ -158,6 +155,10 @@ def endpoint2(request, ability_id):
                     where "rank" = 1
                     order by cnt desc""" % ability_id)
 
+    re = {
+        'status': 'ok',
+    }
+    return JsonResponse(re, json_dumps_params={'indent': 3}, status=200)
     result, name_of_columns = get_result_and_columns(query)
 
     if not result:

@@ -222,4 +222,9 @@ def endpoint2(request, ability_id):
 
 
 def endpoint3(request):
-    pass
+
+    item = {
+        'status': 'ok'
+    }
+    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
+

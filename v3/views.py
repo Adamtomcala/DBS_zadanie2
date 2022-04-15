@@ -53,7 +53,10 @@ def endpoint1(request, match_id):
 
     data = cursor.fetchall()
 
-    heroes = data[1]
+    heroes = []
+    for row in data:
+        heroes.append(row[1])
+
     heroes_set = set(heroes)
     heroes = list(heroes_set)
 

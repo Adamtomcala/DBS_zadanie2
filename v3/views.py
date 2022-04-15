@@ -4,9 +4,8 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 
 
-# Funkcia na nadviazanie spojenia + vratenia vysledku z QUERY
-# Funkcia navyse vracia nazvy stlpcov, ktore pouzivam pri formatovani
-def get_result_and_columns(query):
+def endpoint1(request, match_id):
+
     connection = psycopg2.connect(
         host=os.getenv('DBHOST'),
         database=os.getenv('DBNAME'),
@@ -17,14 +16,7 @@ def get_result_and_columns(query):
 
     cursor = connection.cursor()
 
-    cursor.execute(query)
-
-    return cursor.fetchall(), [desc[0] for desc in cursor.description]
-
-
-def endpoint1(request, match_id):
-
-    query = (f"""WITH res AS (
+    cursor.execute(f"""WITH res AS (
                     SELECT mpd.id, mpd.hero_id, mpd.match_id, h.localized_name
                     FROM matches_players_details AS mpd
                     JOIN heroes AS h
@@ -59,172 +51,36 @@ def endpoint1(request, match_id):
                     ) res3
                 WHERE res3.rank <= 5""" % (str(match_id), str(match_id)))
 
-    result, name_of_columns = get_result_and_columns(query)
+    data = cursor.fetchall()
 
-    if not result:
-        pass
+    heroes = data[1]
+    heroes_set = set(heroes)
+    heroes = list(heroes_set)
 
-    item = {
-        'id': result[0][0]
+    result = {
+        'id': data[0][0],
     }
-    size = len(result)
-    heroes = []
-
-    it = 0
-    flag = True
-
-    while flag:
-        heroes.append({
-            name_of_columns[1]: result[it][1],
-            name_of_columns[2]: result[it][2],
+    iterator = 0
+    final_heores = []
+    for i in range(0, len(heroes)):
+        hero = heroes[i]
+        final_heores.append({
+            'id': data[i][2],
+            'name': hero,
         })
-        items = []
-        for i in range(it, size):
-            if i == size - 1:
-                flag = False
-                if result[it][1] == result[i][1]:
-                    items.append({
-                        name_of_columns[5]: result[i][5],
-                        'id': result[i][3],
-                        'name': result[i][4],
-                    })
-                else:
-                    heroes[len(heroes) - 1]['top_purchases'] = items
-                    items = []
-                    items.append({
-                        name_of_columns[5]: result[i][5],
-                        'id': result[i][3],
-                        'name': result[i][4],
-                    })
-            elif result[it][1] == result[i][1]:
-                items.append({
-                    name_of_columns[5]: result[i][5],
-                    'id': result[i][3],
-                    'name': result[i][4],
-                })
-            else:
-                it = i
-                break
-        heroes[len(heroes) - 1]['top_purchases'] = items
+        purchases = []
+        while data[iterator][1] == hero:
+            purchases.append({
+                'id': data[iterator][3],
+                'name': data[iterator][4],
+                'count': data[iterator][5],
+            })
+        final_heores[len(final_heores)]['top_purchase'] = purchases
 
-    item['heroes'] = heroes
+    result['heroes'] = final_heores
 
-    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
+    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
 
 
-def endpoint2(request, ability_id):
 
-    query = (f"""with res as (
-                select ab.id, ab.name, h.id as hero_id, h.localized_name,
-                                            CASE
-                                                WHEN mpd.player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
-                                                ELSE mt.radiant_win
-                                            END AS winner,
-                                            CASE
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.1 THEN '0-9'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.2 THEN '10-19'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.3 THEN '20-29'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.4 THEN '30-39'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.5 THEN '40-49'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.6 THEN '50-59'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.7 THEN '60-69'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.8 THEN '70-79'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.9 THEN '80-89'
-                                                WHEN cast(au.time as decimal)/mt.duration < 1.0 THEN '90-99'
-                                                ELSE '100-109'
-                                            END as timee
-                                        from abilities as ab
-                                        join ability_upgrades as au
-                                            on ab.id = au.ability_id
-                                        join matches_players_details as mpd
-                                            on mpd.id = au.match_player_detail_id
-                                        join matches as mt
-                                            on mpd.match_id = mt.id
-                                        join heroes as h
-                                            on h.id = mpd.hero_id
-                                        where ab.id = %s
-            )
-            select *
-            from(
-                select distinct *, dense_rank() over(partition by res2.hero_id, res2.winner order by res2.cnt DESC) as "rank"
-                        from (
-                                select res.id, res.name, res.hero_id, res.localized_name, res.winner, res.timee, count(*) as cnt
-                                from res
-                                group by (res.id, res.name, res.hero_id,res.localized_name, res.winner, res.timee)
-                            ) res2
-                ) res3
-            where "rank" = 1
-            order by cnt desc""" % ability_id)
-
-    result, name_of_columns = get_result_and_columns(query)
-
-    if not result:
-        pass
-
-    item = {
-        name_of_columns[0]: result[0][0],
-        name_of_columns[1]: result[0][1],
-    }
-    size = len(result)
-    heroes = []
-
-    it = 0
-    flag = True
-
-    heroes = []
-    while flag:
-        heroes.append({
-            'id': result[it][2],
-            'name': result[it][3],
-        })
-        team1 = {}
-        team2 = {}
-        for i in range(it, size):
-            if i == size - 1:
-                if result[it][2] == result[i][2]:
-                    if result[i][4]:
-                        team1 = {
-                            'bucket': result[i][5],
-                            'count': result[i][6],
-                        }
-                    else:
-                        team2 = {
-                            'bucket': result[i][5],
-                            'count': result[i][6],
-                        }
-                else:
-                    it = i
-                    break
-                flag = False
-            elif result[it][2] == result[i][2]:
-                if result[i][4]:
-                    team1 = {
-                        'bucket': result[i][5],
-                        'count': result[i][6],
-                    }
-                else:
-                    team2 = {
-                        'bucket': result[i][5],
-                        'count': result[i][6],
-                    }
-            else:
-                it = i
-                break
-
-        if len(team1) != 0:
-            heroes[len(heroes) - 1]['usage_winners'] = team1
-        if len(team2) != 0:
-            heroes[len(heroes) - 1]['usage_loosers'] = team2
-
-    item['heroes'] = heroes
-
-    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
-
-
-def endpoint3(request):
-
-    item = {
-        'status': 'ok'
-    }
-    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 

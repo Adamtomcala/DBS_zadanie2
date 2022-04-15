@@ -127,16 +127,11 @@ def endpoint2(request, match_id):
 
     data = cursor.fetchall()
 
-    heroes = []
-    for row in data:
-        heroes.append(row[2])
-    heroes_set = set(heroes)
-    heroes = list(heroes_set)
+
 
     res = {
         'id': data[0][0],
         'name': data[0][1],
-        'heroes': heroes
     }
     return JsonResponse(res, status=200)
     it = 0

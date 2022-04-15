@@ -78,6 +78,10 @@ def endpoint1(request, match_id):
 
 
 def endpoint2(request, match_id):
+    res = {
+        'status': 'ok'
+    }
+    return JsonResponse(res, status=200)
     connection = psycopg2.connect(
         host=os.getenv('DBHOST'),
         database=os.getenv('DBNAME'),

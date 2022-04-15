@@ -57,25 +57,21 @@ def endpoint1(request, match_id):
     for row in data:
         heroes.append(row[1])
 
-    result = {}
-
-
     heroes_set = set(heroes)
     heroes = list(heroes_set)
-
-    result['heroes'] = heroes
-    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
+    heroes.sort()
 
     result = {
         'id': data[0][0],
     }
     iterator = 0
     final_heores = []
+
     for i in range(0, len(heroes)):
         hero = heroes[i]
         final_heores.append({
-            'id': data[i][2],
-            'name': hero,
+            'id': hero,
+            'name': data[i][2],
         })
         purchases = []
         while data[iterator][1] == hero:
@@ -84,6 +80,7 @@ def endpoint1(request, match_id):
                 'name': data[iterator][4],
                 'count': data[iterator][5],
             })
+            iterator += 1
         final_heores[len(final_heores)]['top_purchase'] = purchases
 
     result['heroes'] = final_heores

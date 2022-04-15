@@ -71,7 +71,7 @@ def endpoint1(request, match_id):
         hero = heroes[i]
         final_heores.append({
             'id': hero,
-            'name': data[i][2],
+            'name': data[iterator][2],
         })
         purchases = []
         while data[iterator][1] == hero:
@@ -81,7 +81,7 @@ def endpoint1(request, match_id):
                 'count': data[iterator][5],
             })
             iterator += 1
-        final_heores[len(final_heores)]['top_purchase'] = purchases
+        final_heores[len(final_heores) - 1]['top_purchase'] = purchases
 
     result['heroes'] = final_heores
 

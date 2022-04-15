@@ -82,7 +82,7 @@ def endpoint1(request, match_id):
                 'count': data[iterator][5],
             })
             iterator += 1
-            if iterator == len(data) - 1:
+            if iterator == len(data):
                 break
         final_heores[len(final_heores) - 1]['top_purchase'] = purchases
 

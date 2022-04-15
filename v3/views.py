@@ -136,8 +136,9 @@ def endpoint2(request, match_id):
     res = {
         'id': data[0][0],
         'name': data[0][1],
+        'heroes': heroes
     }
-
+    return JsonResponse(res, status=200)
     it = 0
     h = []
     for i in range(len(heroes)):

@@ -58,11 +58,13 @@ def endpoint1(request, match_id):
         heroes.append(row[1])
 
     result = {}
-    result['heroes'] = heroes
-    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
+
 
     heroes_set = set(heroes)
     heroes = list(heroes_set)
+
+    result['heroes'] = heroes
+    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
 
     result = {
         'id': data[0][0],

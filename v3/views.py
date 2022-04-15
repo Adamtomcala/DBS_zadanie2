@@ -31,11 +31,11 @@ def endpoint1(request, match_id):
                     JOIN matches ON mpd.match_id = matches.id
                     JOIN purchase_logs ON mpd.id = purchase_logs.match_player_detail_id
                     JOIN items ON purchase_logs.item_id = items.id
-                    WHERE matches.id = 21421
+                    WHERE matches.id = %s
                     GROUP BY heroes.id, items.id, matches.id, purchase_logs.item_id, items.name, mpd.player_slot)
                 SELECT * FROM nested
                 WHERE nested.winner is TRUE AND nested.row_num <= 5
-                ORDER BY hero, count DESC""" % (str(match_id), str(match_id)))
+                ORDER BY hero, count DESC""" % str(match_id))
 
     data = cursor.fetchall()
 

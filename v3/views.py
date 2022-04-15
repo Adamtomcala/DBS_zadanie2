@@ -16,46 +16,32 @@ def endpoint1(request, match_id):
 
     cursor = connection.cursor()
 
-    cursor.execute(f"""WITH res AS (
-                    SELECT mpd.id, mpd.hero_id, mpd.match_id, h.localized_name
+    cursor.execute(f"""WITH nested AS (
+                    SELECT matches.id, heroes.localized_name, heroes.id as hero,
+                    purchase_logs.item_id, items.name, count(*),
+                    ROW_NUMBER() OVER (PARTITION BY heroes.id
+                                       ORDER BY count(*) DESC, items.name
+                                       ) AS row_num ,
+                    CASE
+                        WHEN player_slot in (0,1,2,3,4) AND radiant_win OR player_slot in (128,129,130,131,132) AND NOT radiant_win THEN True
+                        ELSE False
+                    END AS winner
                     FROM matches_players_details AS mpd
-                    JOIN heroes AS h
-                        ON
-                    h.id = mpd.hero_id
-                    WHERE mpd.hero_id IN (
-                                        SELECT h.id FROM matches_players_details AS mpd
-                                        JOIN matches AS mt
-                                            ON mpd.match_id = mt.id
-                                        JOIN heroes AS h
-                                            ON h.id = mpd.hero_id
-                                        WHERE mpd.match_id = %s AND 
-                                            ((mpd.player_slot IN (0,1,2,3,4) AND mt.radiant_win) 
-                                             OR (mpd.player_slot IN (128,129,130,131,132) AND NOT mt.radiant_win))
-                                        ) AND mpd.match_id = %s
-                            )																	
-                SELECT res3.match_id, res3.hero_id AS "id", res3.localized_name AS "name" ,
-                       res3.item_id, res3.item_name, res3. cnt AS "count"
-                FROM(
-                     SELECT *, rank() over(PARTITION BY res2.hero_id ORDER BY res2.cnt DESC, res2.item_name)
-                     FROM (	
-                            SELECT DISTINCT res.match_id, res.hero_id, res.localized_name,
-                            pl.item_id , items.name AS item_name,  COUNT(*) over(PARTITION BY pl.match_player_detail_id, pl.item_id) AS cnt
-                            FROM purchase_logs AS pl
-                            JOIN res
-                                ON pl.match_player_detail_id = res.id
-                            JOIN items
-                                ON pl.item_id = items.id
-                            ORDER BY res.hero_id, cnt DESC
-                          ) res2
-                     ORDER BY res2.hero_id, res2.cnt DESC
-                    ) res3
-                WHERE res3.rank <= 5""" % (str(match_id), str(match_id)))
+                    JOIN heroes ON mpd.hero_id = heroes.id
+                    JOIN matches ON mpd.match_id = matches.id
+                    JOIN purchase_logs ON mpd.id = purchase_logs.match_player_detail_id
+                    JOIN items ON purchase_logs.item_id = items.id
+                    WHERE matches.id = 21421
+                    GROUP BY heroes.id, items.id, matches.id, purchase_logs.item_id, items.name, mpd.player_slot)
+                SELECT * FROM nested
+                WHERE nested.winner is TRUE AND nested.row_num <= 5
+                ORDER BY hero, count DESC""" % (str(match_id), str(match_id)))
 
     data = cursor.fetchall()
 
     heroes = []
     for row in data:
-        heroes.append(row[1])
+        heroes.append(row[2])
 
     heroes_set = set(heroes)
     heroes = list(heroes_set)
@@ -72,10 +58,10 @@ def endpoint1(request, match_id):
         hero = heroes[i]
         final_heores.append({
             'id': hero,
-            'name': data[iterator][2],
+            'name': data[iterator][1],
         })
         purchases = []
-        while data[iterator][1] == hero:
+        while data[iterator][2] == hero:
             purchases.append({
                 'id': data[iterator][3],
                 'name': data[iterator][4],
@@ -84,12 +70,8 @@ def endpoint1(request, match_id):
             iterator += 1
             if iterator == len(data):
                 break
-        final_heores[len(final_heores) - 1]['top_purchase'] = purchases
+        final_heores[len(final_heores) - 1]['top_purchases'] = purchases
 
     result['heroes'] = final_heores
 
     return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
-
-
-
-

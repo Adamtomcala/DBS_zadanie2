@@ -64,6 +64,10 @@ def endpoint1(request, match_id):
     result = {
         'id': data[0][0],
     }
+
+    result['heroes'] = heroes
+    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
+
     iterator = 0
     final_heores = []
 

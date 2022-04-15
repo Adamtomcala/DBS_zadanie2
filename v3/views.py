@@ -78,6 +78,7 @@ def endpoint1(request, match_id):
 
 
 def endpoint2(request):
+
     item = {
         'status': 'ok'
     }

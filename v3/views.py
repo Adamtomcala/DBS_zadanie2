@@ -77,7 +77,7 @@ def endpoint1(request, match_id):
     return JsonResponse(result, status=200)
 
 
-def endpoint2(request, match_id):
+def endpoint2(request):
     item = {
         'status': 'ok'
     }

@@ -114,47 +114,47 @@ def endpoint1(request, match_id):
 
 def endpoint2(request, ability_id):
 
-    query = (f"""with res as (
-                select ab.id, ab.name, h.id as hero_id, h.localized_name,
+    query = (f"""WITH res AS (
+                 SELECT ab.id, ab.name, h.id AS hero_id, h.localized_name,
                                             CASE
                                                 WHEN mpd.player_slot IN (128,129,130,131,132) THEN NOT mt.radiant_win
                                                 ELSE mt.radiant_win
                                             END AS winner,
                                             CASE
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.1 THEN '0-9'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.2 THEN '10-19'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.3 THEN '20-29'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.4 THEN '30-39'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.5 THEN '40-49'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.6 THEN '50-59'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.7 THEN '60-69'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.8 THEN '70-79'
-                                                WHEN cast(au.time as decimal)/mt.duration < 0.9 THEN '80-89'
-                                                WHEN cast(au.time as decimal)/mt.duration < 1.0 THEN '90-99'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.1 THEN '0-9'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.2 THEN '10-19'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.3 THEN '20-29'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.4 THEN '30-39'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.5 THEN '40-49'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.6 THEN '50-59'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.7 THEN '60-69'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.8 THEN '70-79'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 0.9 THEN '80-89'
+                                                WHEN CAST(au.time AS DECIMAL)/mt.duration < 1.0 THEN '90-99'
                                                 ELSE '100-109'
-                                            END as timee
-                                        from abilities as ab
-                                        join ability_upgrades as au
-                                            on ab.id = au.ability_id
-                                        join matches_players_details as mpd
-                                            on mpd.id = au.match_player_detail_id
-                                        join matches as mt
-                                            on mpd.match_id = mt.id
-                                        join heroes as h
-                                            on h.id = mpd.hero_id
-                                        where ab.id = %s
+                                            END AS timee
+                                        FROM abilities AS ab
+                                        JOIN ability_upgrades AS au
+                                            ON ab.id = au.ability_id
+                                        JOIN matches_players_details AS mpd
+                                            ON mpd.id = au.match_player_detail_id
+                                        JOIN matches AS mt
+                                            ON mpd.match_id = mt.id
+                                        JOIN heroes AS h
+                                            ON h.id = mpd.hero_id
+                                        WHERE ab.id = %s
             )
-            select *
-            from(
-                select distinct *, dense_rank() over(partition by res2.hero_id, res2.winner order by res2.cnt DESC) as "rank"
-                        from (
-                                select res.id, res.name, res.hero_id, res.localized_name, res.winner, res.timee, count(*) as cnt
-                                from res
-                                group by (res.id, res.name, res.hero_id,res.localized_name, res.winner, res.timee)
+            SELECT *
+            FROM(
+                SELECT DISTINCT *, dense_rank() over(PARTITION BY res2.hero_id, res2.winner ORDER BY res2.cnt DESC) AS "rank"
+                        FROM (
+                                SELECT res.id, res.name, res.hero_id, res.localized_name, res.winner, res.timee, COUNT(*) AS cnt
+                                FROM res
+                                GROUP BY (res.id, res.name, res.hero_id,res.localized_name, res.winner, res.timee)
                             ) res2
                 ) res3
-            where "rank" = 1
-            order by cnt desc""" % ability_id)
+            WHERE "rank" = 1
+            ORDER BY cnt DESC""" % ability_id)
 
     result, name_of_columns = get_result_and_columns(query)
 
@@ -223,9 +223,50 @@ def endpoint2(request, ability_id):
 
 def endpoint3(request):
 
-    item = {
-        'status': 'ok'
-    }
-    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
+    query = """ WITH res AS (SELECT mpd.id, ga.time, mpd.match_id, mpd.hero_id, ga.subtype,
+                 ROW_NUMBER() OVER(PARTITION BY mpd.match_id ORDER BY mpd.match_id, ga.time),
+                 ROW_NUMBER() OVER(PARTITION BY mpd.match_id, mpd.hero_id ORDER BY mpd.match_id, ga.time),
+                 (ROW_NUMBER() OVER(PARTITION BY mpd.match_id ORDER BY mpd.match_id, ga.time)) - 
+                 (ROW_NUMBER() OVER(PARTITION BY mpd.match_id, mpd.hero_id ORDER BY mpd.match_id, ga.time)) AS diff
+                FROM matches_players_details AS mpd
+                JOIN game_objectives AS ga
+                    ON ga.match_player_detail_id_1 = mpd.id OR mpd.id = ga.match_player_detail_id_2
+                WHERE (ga.match_player_detail_id_1 IS NOT NULL OR ga.match_player_detail_id_2 IS NOT NULL)
+                AND ga.subtype = 'CHAT_MESSAGE_TOWER_KILL'
+                ORDER BY mpd.match_id, ga.time
+                )
+                SELECT res3.hero_id, res3.maxx, heroes.localized_name
+                FROM (
+                        SELECT res2.hero_id, max(res2.r) AS maxx
+                        FROM (
+                                SELECT *,  ROW_NUMBER() OVER(PARTITION BY res.match_id, res.hero_id, res.diff) AS r
+                                FROM res
+                                ORDER BY r DESC
+                            ) res2
+                        GROUP BY res2.hero_id
+                        ORDER BY maxx DESC
+                    ) res3
+                JOIN heroes
+                    ON res3.hero_id = heroes.id
+                ORDER BY res3.maxx DESC, res3.hero_id"""
+
+    result, name_of_columns = get_result_and_columns(query)
+
+    if not result:
+        pass
+
+    heroes = []
+
+    for row in result:
+        heroes.append(
+            {
+                'id': row[0],
+                'name': row[2],
+                'tower_kills': row[1],
+            }
+        )
+    result['heroes'] = heroes
+
+    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
 
 

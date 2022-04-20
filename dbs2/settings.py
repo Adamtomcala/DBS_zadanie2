@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = False
 
 ALLOWED_HOSTS = [
- 'dbs2.herokuapp.com'
+ 'dbs2.herokuapp.com', '*'
 ]
 
 # Application definition

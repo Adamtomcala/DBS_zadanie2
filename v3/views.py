@@ -22,7 +22,7 @@ def get_result_and_columns(query):
     return cursor.fetchall(), [desc[0] for desc in cursor.description]
 
 
-def endpoint1(request, match_id):
+def top_purchases(request, match_id):
 
     query = (f"""WITH res AS (
                     SELECT mpd.id, mpd.hero_id, mpd.match_id, h.localized_name
@@ -112,7 +112,7 @@ def endpoint1(request, match_id):
     return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 
-def endpoint2(request, ability_id):
+def ability_usage(request, ability_id):
 
     query = (f"""WITH res AS (
                  SELECT ab.id, ab.name, h.id AS hero_id, h.localized_name,
@@ -221,9 +221,9 @@ def endpoint2(request, ability_id):
     return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 
-def endpoint3(request):
+def tower_kills(request):
 
-    query = """ WITH res AS (SELECT mpd.id, ga.time, mpd.match_id, mpd.hero_id, ga.subtype,
+    query = (f""" WITH res AS (SELECT mpd.id, ga.time, mpd.match_id, mpd.hero_id, ga.subtype,
                  ROW_NUMBER() OVER(PARTITION BY mpd.match_id ORDER BY mpd.match_id, ga.time),
                  ROW_NUMBER() OVER(PARTITION BY mpd.match_id, mpd.hero_id ORDER BY mpd.match_id, ga.time),
                  (ROW_NUMBER() OVER(PARTITION BY mpd.match_id ORDER BY mpd.match_id, ga.time)) - 
@@ -248,7 +248,7 @@ def endpoint3(request):
                     ) res3
                 JOIN heroes
                     ON res3.hero_id = heroes.id
-                ORDER BY res3.maxx DESC, res3.hero_id"""
+                ORDER BY res3.maxx DESC, res3.hero_id""")
 
     result, name_of_columns = get_result_and_columns(query)
 
@@ -256,7 +256,7 @@ def endpoint3(request):
         pass
 
     heroes = []
-
+    item = {}
     for row in result:
         heroes.append(
             {
@@ -265,8 +265,8 @@ def endpoint3(request):
                 'tower_kills': row[1],
             }
         )
-    result['heroes'] = heroes
+    item['heroes'] = heroes
 
-    return JsonResponse(result, json_dumps_params={'indent': 3}, status=200)
+    return JsonResponse(item, json_dumps_params={'indent': 3}, status=200)
 
 

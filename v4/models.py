@@ -252,7 +252,7 @@ class Players(models.Model):
 
 
 class PurchaseLogs(models.Model):
-    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True, related_name='+')
+    match_player_detail = models.ForeignKey(MatchesPlayersDetails, models.DO_NOTHING, blank=True, null=True, related_name='log')
     item = models.ForeignKey(Items, models.DO_NOTHING, blank=True, null=True, related_name='+')
     time = models.IntegerField(blank=True, null=True)
 

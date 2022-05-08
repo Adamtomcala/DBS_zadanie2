@@ -1,60 +1,13 @@
-from django.db.models.functions import Rank, Coalesce, Round, Cast, Extract, Lead
+from django.db.models.functions import Rank, Coalesce, Round, Cast, Extract, Lead, RowNumber
 from . import models
 from django.db.models import Case, When, Value, F, Count, Max, Q, TextField, IntegerField, Sum, FilteredRelation
-from django.db.models.expressions import Window, Subquery, OuterRef
+from django.db.models.expressions import Window, Subquery, OuterRef, ExpressionWrapper
 
 from django.http import JsonResponse
 
 
 def matches_and_patches(request):
-    patches = models.Patches.objects.using('dota').raw("""SELECT mt.id, res.patch_version, res.patch_start_date, res.patch_end_date, mt.id AS match_id, 
-                            ROUND(mt.duration/60.00,2) AS "duration"
-                            FROM matches AS mt
-                            RIGHT JOIN 
-                            (	SELECT 	"name" AS patch_version, CAST(EXTRACT (EPOCH FROM release_date) AS INTEGER)
-                                        AS patch_start_date,
-                                        LEAD(CAST(EXTRACT (EPOCH FROM release_date) AS INTEGER), 1) OVER(ORDER BY release_date) 
-                                        AS patch_end_date
-                            FROM patches
-                            ORDER BY "id") AS res
-                                ON mt.start_time BETWEEN res.patch_start_date AND res.patch_end_date 
-                            ORDER BY res.patch_version, match_id""")
-
-    records = []
-    size = len(patches)
-
-    # Pomocne premenne pri formatovani
-    flag = True
-    it = 0
-
-    # Uprava formatu
-    while flag:
-        item = {
-            'patch_version': patches[it].patch_version,
-            'patch_start_date': patches[it].patch_start_date,
-            'patch_end_date': patches[it].patch_end_date
-        }
-        matches = []
-        for i in range(it, size):
-            if patches[i].patch_version == patches[it].patch_version:
-                if patches[i].match_id is None or patches[i].duration is None:
-                    print("hajo")
-                    if i == size - 1:
-                        flag = False
-                    else:
-                        it = i + 1
-                    break
-                matches.append({
-                    'match_id': patches[i].match_id,
-                    'duration': float(patches[i].duration),
-                })
-            else:
-                it = i
-                break
-        item['matches'] = matches
-        records.append(item)
-
-    return JsonResponse({'patches': records}, json_dumps_params={'indent': 3}, status=200)
+    pass
 
 
 def game_experiences(request, player_id):
@@ -180,7 +133,6 @@ def player_abilities(request, player_id):
     item = {
         'id': players[0].match_player_detail.player.id,
         'player_nick': players[0].match_player_detail.player.nick,
-
     }
 
     matches = []
@@ -233,11 +185,62 @@ def player_abilities(request, player_id):
 
 
 def top_purchases(request, match_id):
-    pass
+    mpd = models.MatchesPlayersDetails.objects.using('dota').filter(
+            Q(
+                ((Q(player_slot__exact=128) | Q(player_slot__exact=129) | Q(player_slot__exact=130) |
+                  Q(player_slot__exact=131) | Q(player_slot__exact=132)) & Q(match__radiant_win__exact=False)) |
+                ((Q(player_slot__exact=0) | Q(player_slot__exact=1) | Q(player_slot__exact=2) |
+                  Q(player_slot__exact=3) | Q(player_slot__exact=4)) & Q(match__radiant_win__exact=True))
+             ), match=match_id).prefetch_related("log").annotate(count=Window(expression=Count('*'),
+                         partition_by=[F('log__match_player_detail'), F('log__item')]), log_id=F('log')).distinct('match', 'hero',
+                                                'hero__localized_name', 'log__item', 'log__item__name', 'count').order_by(
+        'hero', '-count', 'log__item').annotate(
+        rank=Window(expression=RowNumber()
+                    )
+    )
+
+    if not mpd:
+        pass
+
+    item = {
+        'id': mpd[0].match.id,
+    }
+
+    size = len(mpd)
+    flag = True
+    heroes = []
+    it = 0
+    while flag:
+        is_hero = True
+        heroes.append({
+            'id': mpd[it].hero.id,
+            'name': mpd[it].hero.localized_name,
+        })
+        purchase = []
+        cnt = 0
+        for i in range(it, size):
+            if i == size - 1:
+                flag = False
+            if cnt < 5 and mpd[it].hero.id == mpd[i].hero.id:
+                pl = mpd[i].log.get(id=mpd[i].log_id)
+                purchase.append({
+                    'count': mpd[i].count,
+                    'id': pl.item.id,
+                    'name': pl.item.name
+                })
+                cnt += 1
+            elif mpd[it].hero.id != mpd[i].hero.id:
+                it = i
+                break
+        heroes[len(heroes) - 1]['top_purchase'] = purchase
+
+    item['heroes'] = heroes
+
+    return JsonResponse(item, status=200, safe=False, json_dumps_params={'indent': 3})
 
 
 def ability_usage(request, ability_id):
-    """
+    from django.db.models import FloatField
     mpd = models.AbilityUpgrades.objects.using('dota').filter(ability_id=ability_id).annotate(
         winner=Case(
             When((Q(match_player_detail__player_slot__exact=128) | Q(match_player_detail__player_slot__exact=129) | Q(match_player_detail__player_slot__exact=130) |
@@ -253,14 +256,100 @@ def ability_usage(request, ability_id):
                   Q(match_player_detail__player_slot__exact=3) | Q(match_player_detail__player_slot__exact=4)) & Q(match_player_detail__match__radiant_win__exact=False),
                  then=Value(False))
         ),
-        timee=Case(
-            When(Q(F())),
-            When(),
-            When(),
-            When()
-            )
-    )
-    """
+        timee=ExpressionWrapper(F('time')*1.0/F('match_player_detail__match__duration'), output_field=FloatField())
+    ).annotate(
+        bucket=Case(
+            When(Q(timee__lt=0.1), then=Value('0-9')),
+            When(Q(timee__lt=0.2), then=Value('10-19')),
+            When(Q(timee__lt=0.3), then=Value('20-29')),
+            When(Q(timee__lt=0.4), then=Value('30-39')),
+            When(Q(timee__lt=0.5), then=Value('40-39')),
+            When(Q(timee__lt=0.6), then=Value('50-59')),
+            When(Q(timee__lt=0.7), then=Value('60-69')),
+            When(Q(timee__lt=0.8), then=Value('70-79')),
+            When(Q(timee__lt=0.9), then=Value('80-89')),
+            When(Q(timee__lt=1.0), then=Value('90-99')),
+            default=Value('100-109')
+        )
+    ).annotate(
+        count=Window(expression=Count('*'), partition_by=[F('ability'), F('ability__name'),
+                                          F('match_player_detail__hero'), F('match_player_detail__hero__localized_name'),
+                                          F('winner'), F('bucket')])
+    ).distinct('ability', 'ability__name', 'match_player_detail__hero', 'match_player_detail__hero__localized_name',
+               'winner', 'bucket', 'count').order_by('-match_player_detail__hero', 'winner', 'count').reverse()
+
+    if not mpd:
+        pass
+
+    item = {
+        'id': mpd[0].ability.id,
+        'name': mpd[0].ability.name,
+    }
+    size = len(mpd)
+    heroes = []
+    it = 0
+    flag = True
+
+    while flag:
+
+        hero = mpd[it].match_player_detail.hero.id
+        heroes.append({
+            'id': hero,
+            'name': mpd[it].match_player_detail.hero.localized_name
+        })
+        winner = True
+        win_dir = {}
+        loss = True
+        loss_dir = {}
+        for i in range(it, size):
+            if i == size - 1:
+                flag = False
+                if hero != mpd[i].match_player_detail.hero.id:
+                    if win_dir:
+                        heroes[len(heroes) - 1]['usage_winners'] = win_dir
+                    if loss_dir:
+                        heroes[len(heroes) - 1]['usage_loosers'] = loss_dir
+
+                    hero = mpd[i].match_player_detail.hero.id
+                    heroes.append({
+                        'id': hero,
+                        'name': mpd[i].match_player_detail.hero.localized_name
+                    })
+                    winner = True
+                    win_dir = {}
+                    loss = True
+                    loss_dir = {}
+
+                    if mpd[i].winner and winner:
+                        win_dir['bucket'] = mpd[i].bucket
+                        win_dir['count'] = mpd[i].count
+                        winner = False
+                    elif not mpd[i].winner and loss:
+                        loss_dir['bucket'] = mpd[i].bucket
+                        loss_dir['count'] = mpd[i].count
+                        loss = False
+
+            if hero == mpd[i].match_player_detail.hero.id:
+                if mpd[i].winner and winner:
+                    win_dir['bucket'] = mpd[i].bucket
+                    win_dir['count'] = mpd[i].count
+                    winner = False
+                elif not mpd[i].winner and loss:
+                    loss_dir['bucket'] = mpd[i].bucket
+                    loss_dir['count'] = mpd[i].count
+                    loss = False
+            else:
+                it = i
+                break
+        if win_dir:
+            heroes[len(heroes) - 1]['usage_winners'] = win_dir
+        if loss_dir:
+            heroes[len(heroes) - 1]['usage_loosers'] = loss_dir
+
+    item['heroes'] = heroes
+
+    return JsonResponse(item, status=200, safe=False, json_dumps_params={'indent': 3})
+
 
 def tower_kills(request):
     pass

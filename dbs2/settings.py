@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'v1'
+    'v1',
+    'v4'
 ]
 
 MIDDLEWARE = [
@@ -80,7 +81,8 @@ WSGI_APPLICATION = 'dbs2.wsgi.application'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
+    'default': {},
+    'dota': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DBNAME'),
         'HOST': os.getenv('DBHOST'),
